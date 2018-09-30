@@ -22,6 +22,7 @@ int parseInput(int numNodes, string content){
 	int length = content.length();
   	int i = 0;
   	string buffer;
+
   	while (i < content.length()){
   		if(content[i] == ' ' || content[i] == ':' || content[i] == '!' || content[i] == '.' || content[i] == ',' 
   			|| content[i] == ';' || content[i] == '-' || content[i] == '\r' || content[i] == '\n'){
@@ -40,32 +41,33 @@ int parseInput(int numNodes, string content){
   		}
   	}
 
-  	// for(int j = 0; j < wordVector.size(); j++){
-  	// 	cout << wordVector[j] << endl;
-  	// }
-
-  	cout << "number of nodes: " << numNodes << endl;
-  	cout << "number of words: " << wordVector.size() << endl;
-  	cout << "words per node: " << wordVector.size()/numNodes << endl;
-  	int wordsPerNode = wordVector.size()/numNodes;
   	int wordVecLength = wordVector.size();
+  	int wordsPerNode = wordVecLength/numNodes;
+  	int wordsLeftOver = 0;
+
+  	if((wordsPerNode * numNodes) != wordVecLength){
+  		wordsLeftOver = wordVecLength - (wordsPerNode * numNodes);
+  	}
  	vector<vector<string> >nodeVector;
  	for(int j = 0; j < numNodes; j++){
 		vector<string> tempVec;
 		int limit = wordVector.size() - wordsPerNode;
  		for(int i = wordVector.size(); i > limit; i--){
- 			if(i == wordVecLength){
- 			}
- 			else{
- 				tempVec.push_back(wordVector[i]);
- 				wordVector.pop_back();
- 			}
+			tempVec.push_back(wordVector[i]);
+			wordVector.pop_back();
  		}
  		nodeVector.push_back(tempVec);
- 		cout << tempVec.size() << endl;
  	}
- 	cout << nodeVector.size() << endl;
-
+ 	if(wordsLeftOver == 0){
+ 		nodeVector[0].push_back(wordVector[0]);
+ 	}
+ 	else if(wordsLeftOver > 0){
+ 		int var = 0;
+ 		while(var != wordsLeftOver){
+ 			nodeVector[var].push_back(wordVector[var]);
+ 			var++;
+ 		}
+ 	}
  	// nodeVector contains n vectors (one for each node as given from user input)
   	return 0;
 }
