@@ -218,7 +218,7 @@ int forkyeah(int num_maps, int num_reduces){
 		}
 		mapSemVec.push_back(sem_id);
 	}
-
+	vector<int> semIds;
 	for(int i = 0; i < num_reduces; i++){
 		int sem_id = semget(IPC_PRIVATE, 1, IPC_CREAT | 0600);
 		if (sem_id == -1) {
@@ -277,7 +277,15 @@ int forkyeah(int num_maps, int num_reduces){
 	}
 	// shm->index++;
 	// while ((wpid = wait(&status)) > 0); // only the parent waits
+	printf("made it here!!!\n");
 	cout << "here in parent " << getpid() << endl;
+	for (int count = 0; count < mapSemVec.size(); count++) {
+		semctl(mapSemVec[count], 0, IPC_RMID);
+	}
+
+	for (int count = 0; count < reduceSemVec.size(); count++) {
+		semctl(reduceSemVec[count], 0, IPC_RMID);
+	}
 	return 0;
 }
 
