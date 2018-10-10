@@ -31,73 +31,21 @@ vector<vector<string> >nodeVector;
 // vector<int> reducePID;
 // vector<int> mapShmSid;
 
-struct commonData {
-	// int index;
-	vector <string> wordVector;
-	vector<std::pair <std::string,int> > wordMap;
-	vector<std::pair <std::string,int> > newMap;
-	vector <int> value;
-	// std::pair <std::string,int> pairs; 
-	// map<string, int> mapOfWords;
-struct CommonData* next;
-};
+// struct commonData {
+// 	// int index;
+// 	vector <string> wordVector;
+// 	vector<std::pair <std::string,int> > wordMap;
+// 	vector<std::pair <std::string,int> > newMap;
+// 	vector <int> value;
+// 	// std::pair <std::string,int> pairs; 
+// 	// map<string, int> mapOfWords;
+// struct CommonData* next;
+// };
 
 vector<std::pair <std::string,int> > vecOfPairs;
 multimap<string,int> mymultimap;
-vector<commonData*> mapShm;
+// vector<commonData*> mapShm;
 vector<int> mapShmid;
-
-// int map(int numOfProcess){
-// 	cout << "IN map" << endl;
-// 	struct commonData* shm = mapShm[numOfProcess];
-// 	vector<string> wordVec = shm->wordVector;
-
-// 	std::pair <std::string,int> pairs;
-//   	for(int i = 0; i < wordVec.size(); i++){
-// 		// cout << "HERE " << i << endl;
-// 		std::transform(wordVec[i].begin(), wordVec[i].end(), wordVec[i].begin(), ::tolower);
-//   		pairs.first = wordVec[i];
-//   		pairs.second = 1;
-//   		shm->wordMap.push_back(pairs);
-//   	}
-
-//   	for(int i = 0; i < shm->wordMap.size(); i++){
-//   		if(shm->newMap.size() == 0){
-//   			pairs.first = shm->wordMap[i].first;
-//   			pairs.second = shm->wordMap[i].second;
-//   			shm->newMap.push_back(pairs);
-//   			continue;
-//   		}
-//   		for(int j = 0; j < shm->newMap.size(); j++){
-//   			// cout << shm->newMap[j].first << " vs. " << shm->wordMap[i].first << endl;
-//   			if(shm->newMap[j].first == shm->wordMap[i].first){
-//   				shm->newMap[j].second = shm->newMap[j].second + 1;
-//   				break;
-//   			}
-//   			if(shm->newMap[j].first > shm->wordMap[i].first){
-//   				pairs.first = shm->wordMap[i].first;
-//   				pairs.second = shm->wordMap[i].second;
-//   				shm->newMap.insert(shm->newMap.begin()+ j, pairs);
-//   				break;
-//   			}
-//   			if(j+1 == shm->newMap.size()){
-// 				pairs.first = shm->wordMap[i].first;
-//   				pairs.second = shm->wordMap[i].second;
-// 				shm->newMap.push_back(pairs);
-// 			}
-//   		}
-//   	}
-//   	for(int i = 0; i < shm->newMap.size(); i++){
-//   		cout << shm->newMap[i].first << endl;
-//   		cout << shm->newMap[i].second << endl;
-// 	}
-// 	// cout << "value " << shm->value.size() << endl;
-//   	// for(int i = 0; i < shm->newMap.size(); i++){
-//   	// 	cout << shm->newMap[i].first << " " << shm->newMap[i].second << endl; 
-//   	// }
-
-// 	return 0;
-// }
 
 vector<string> parseInput(string content){
 	// This method takes in two inputs: number of Nodes and string with all text
@@ -110,8 +58,7 @@ vector<string> parseInput(string content){
 
   	while (i < content.length()){
   		if(content[i] == ' ' || content[i] == ':' || content[i] == '!' || content[i] == '.' || content[i] == ',' 
-  			|| content[i] == ';' || content[i] == '-' || content[i] == '\r' || content[i] == '\n' 
-  			|| content[i] == '(' || content[i] == ')'){
+  			|| content[i] == ';' || content[i] == '-' || content[i] == '\r' || content[i] == '\n'){
   			if(!buffer.empty()){
   				wordVector.push_back(buffer);
   				buffer.clear();
@@ -155,11 +102,12 @@ int distributeData(vector<string> wordVector, int numNodes){
 	int wordVecLength = wordVector.size();
   	int wordsPerNode = wordVecLength/numNodes;
   	int wordsLeftOver = 0;
-  	// vector<vector<string> >nodeVector;
-
   	if((wordsPerNode * numNodes) != wordVecLength){
+  		cout << "in here!!" << endl;
   		wordsLeftOver = wordVecLength - (wordsPerNode * numNodes);
+  		cout << wordsLeftOver << endl;
   	}
+
  	for(int j = 0; j < numNodes; j++){
 		vector<string> tempVec;
 		int limit = wordVector.size() - wordsPerNode;
@@ -169,15 +117,14 @@ int distributeData(vector<string> wordVector, int numNodes){
  		}
  		nodeVector.push_back(tempVec);
  	}
- 	if(wordsLeftOver == 0){
- 		nodeVector[0].push_back(wordVector[0]);
- 	}
- 	else if(wordsLeftOver > 0){
- 		int var = 0;
- 		while(var != wordsLeftOver){
- 			nodeVector[var].push_back(wordVector[var]);
- 			var++;
- 		}
+ 	int sizee = nodeVector[0].size() + nodeVector[1].size() + nodeVector[2].size() + nodeVector[3].size() + nodeVector[4].size();
+ 	int index = 0;
+ 	while(wordVector.size() != 0){
+ 		nodeVector[index].push_back(wordVector[wordVector.size()-1]);
+ 		wordVector.pop_back();
+ 		index++;
+ 		if(index == numNodes)
+ 			index = 0;
  	}
  	createSharedMem(numNodes);
  	// nodeVector contains n vectors (one for each node as given from user input)
@@ -198,29 +145,17 @@ void sort(){
 			std::transform(nodeVector[j][i].begin(), nodeVector[j][i].end(), nodeVector[j][i].begin(), ::tolower);
 		}
 		std::sort(nodeVector[j].begin(), nodeVector[j].end());
-		// if(j == 0){
-		// 	for(int i = 0; i < nodeVector[j].size(); i++){
-		// 		cout << nodeVector[j][i] << endl;
-		// 	}
-		// }
 	}
 }
 
 void Map(int numOfProcess){
 	int* shared = mmapAddr[numOfProcess];
-	// cout << "in map " << numOfProcess << " " << shared << endl;
-	// shared[0] = 15;
 	vector <string> wordVec = nodeVector[numOfProcess];
 	int numWords = nodeVector[numOfProcess].size();
 	// cout << "size of nodevector[numOfProcess] " << numWords << endl;
 	for(int i = 0; i < numWords; i++){
 		shared[i] = 1;
 	}
-	// if(numOfProcess == 1){
-	// 	for(int i = 0; i < numWords; i++){
-	// 		cout << nodeVector[numOfProcess][i] << endl;
-	// 	}
-	// }
 	int j = 0;
 	int index = 1;
 	int i = 0;
@@ -248,12 +183,6 @@ void Map(int numOfProcess){
 			count = 0;
 		}
 	}
-	// if(numOfProcess == 9){
-	// 	cout << "OUT " << numOfProcess << endl;
-	// 	for(int ind = 0; ind < numWords; ind++){
-	// 		cout << wordVec[ind] << " " << shared[ind] << endl;
-	// 	}
-	// }
 }
 
 void shuffle(){
@@ -297,9 +226,44 @@ void shuffle(){
 		}	
 	}
 	
+	// std::multimap<string,int>::iterator it;
+	// for (it=mymultimap.begin(); it!=mymultimap.end(); ++it)
+ //    	std::cout << (*it).first << " => " << (*it).second << '\n';
+}
+
+void parseReduce(int num_reduces){
+	vector<string> wordVector;
+	vector<int> countVector;
 	std::multimap<string,int>::iterator it;
-	for (it=mymultimap.begin(); it!=mymultimap.end(); ++it)
-    	std::cout << (*it).first << " => " << (*it).second << '\n';
+	cout << "multimap size: " << mymultimap.size() << endl;
+	int wordsPerNode = mymultimap.size()/num_reduces;
+	for (it=mymultimap.begin(); it!=mymultimap.end(); ++it){
+		wordVector.push_back((*it).first);
+		countVector.push_back((*it).second);
+    	// std::cout << (*it).first << " => " << (*it).second << '\n';
+	}
+
+	mmapAddr.clear();
+ 	mmapAddress.clear();
+	nodeVector.clear();
+
+	distributeData(wordVector, num_reduces);
+
+	cout << "done with parse reduce " << endl;
+
+
+	// for(int j = 0; j < num_reduces; j++){
+	// 	int size = nodeVector[j].size();
+	// 	int* shared = mmapAddr[j];
+	// 	for(int i = 0; i < size; i++){
+	// 		shared[i] = countVector[i];
+	// 	}
+	// }
+
+	// int* shared = mmapAddr[0];
+	// for(int i = 0; i < 204; i++){
+	// 	cout << 
+	// }
 }
 
 int forkMaps(int num_maps){
@@ -339,6 +303,38 @@ int forkMaps(int num_maps){
 	return 0;
 }
 
+void reduce(int numOfProcess){
+	vector <string> wordVec = nodeVector[numOfProcess];
+	cout << "IN REDUCE  " << endl;
+
+}
+
+int forkReduces(int num_reduces){
+	int i = 0;
+	int status = 0;
+	pid_t wpid;
+	for(i = 0; i < num_reduces; i++){
+		pid_t pid = fork();
+		// childPID.push_back(getpid());
+		if(pid == 0) // only execute this if child
+		{
+			// childPID.push_back(getpid());
+		    reduce(i);
+		    // cout << "in child " << i << " "<< mmapAddr[i] << endl;
+		    // mmapAddr[i][0] = 15;
+			return 0;
+		}
+	}
+
+	while ((wpid = wait(&status)) > 0); // only the parent waits
+	shuffle();
+	int size = 10000 * sizeof(int);
+	for(int i = 0; i < mmapAddress.size(); i++){
+		munmap(mmapAddress[i], size);
+	}
+	return 0;
+}
+
 int main(int argc, char* argv[]){
 	string app, impl, infile, outfile;
 	int num_maps, num_reduces;
@@ -371,6 +367,8 @@ int main(int argc, char* argv[]){
                        (istreambuf_iterator<char>()    ) );
   	split(num_maps, content);
   	forkMaps(num_maps);
+  	parseReduce(num_reduces);
+  	forkReduces(num_reduces);
   	// cout << "after fork: " << getpid() << endl;
 
   	ifs.close();
