@@ -92,7 +92,7 @@ vector<vector<string> > split(vector<string> wordVector, int numNodes){
  		}
  	}
 
-
+ 	return nodeVector;
 }
 
 void *mapFunction(void *args){
