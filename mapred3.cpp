@@ -21,24 +21,27 @@
 using namespace std;
 vector<int> mapSemVec;
 vector<int> reduceSemVec;
-vector<int> mapPID;
-vector<int> reducePID;
-vector<int> mapShmSid;
+// vector<int> mapPID;
+// vector<int> reducePID;
+// vector<int> mapShmSid;
 
 struct commonData {
 	// int index;
 	vector <string> wordVector;
 	vector<std::pair <std::string,int> > wordMap;
 	vector<std::pair <std::string,int> > newMap;
+	vector <int> value;
 	// std::pair <std::string,int> pairs; 
 	// map<string, int> mapOfWords;
 struct CommonData* next;
 };
 
+vector<std::pair <std::string,int> > vecOfPairs;
 vector<commonData*> mapShm;
 vector<int> mapShmid;
 
 int map(int numOfProcess){
+	cout << "IN map" << endl;
 	struct commonData* shm = mapShm[numOfProcess];
 	vector<string> wordVec = shm->wordVector;
 
@@ -77,7 +80,11 @@ int map(int numOfProcess){
 			}
   		}
   	}
-
+  	for(int i = 0; i < shm->newMap.size(); i++){
+  		cout << shm->newMap[i].first << endl;
+  		cout << shm->newMap[i].second << endl;
+	}
+	// cout << "value " << shm->value.size() << endl;
   	// for(int i = 0; i < shm->newMap.size(); i++){
   	// 	cout << shm->newMap[i].first << " " << shm->newMap[i].second << endl; 
   	// }
@@ -125,21 +132,23 @@ void createSharedMem(vector<vector <string> > nodeVector, int numNodes) {
 	char c;
 	pid_t pid;
 	int shmflg; /* shmflg to be passed to shmget() */ 
-	size_t shmSize = 1024; /* size to be passed to shmget() */ 
+	size_t shmSize = 4096; /* size to be passed to shmget() */ 
 	void* s;
 	// size = sizeof(vector<vector <string> >) + (sizeof(string) * nodeVector.size() * sizeof(nodeVector[0]));
 	// size = sizeof(vector<vector <string> >);
 	for(int i = 0 ; i < numNodes; i++){
 		struct commonData* shm; /* returns a pointer */
 		int shmid; /* return value from shmget() */ 
+		cout << "here " << endl;
+		key_t mem_key;
+		mem_key = ftok(".", i);
 		shmid = shmget (IPC_PRIVATE, shmSize, IPC_CREAT | 0666);
 		mapShmid.push_back(shmid);
-
+		cout << shmid << endl;
 		if (shmid == -1) {
 			perror("shmget: shmget failed"); 
 			exit(1); 
 		}
-		mapShmSid.push_back(shmid);
 
 		if ((shm = (struct commonData*)shmat(shmid, NULL, 0)) == (struct commonData*)-1) {
 	        perror("shmat");
@@ -205,7 +214,9 @@ int shuffle() {
 	std::pair <std::string,int> pairs;
 	vector<std::pair <std::string,int> > sortedMap;
 	// for(int i = 0; i < mapShm.size(); i++){
+	cout << "Here in shuffle " << endl;
 	vector<std::pair <std::string, int> > tempMap = mapShm[0]->newMap;
+	// cout << "Here in shuffle " << endl;
 	if(sortedMap.size() == 0){
 		for(int i = 0; i < tempMap.size(); i++){
 			pairs.first = tempMap[i].first;
@@ -250,6 +261,16 @@ int shuffle() {
 	return 0;
 }
 
+void deleteSHM(){
+	 // destroy the shared memory segment. 
+  	for(int i = 0; i < mapShmid.size(); i++){
+		if (shmctl(mapShmid[i], IPC_RMID, NULL) == -1) {
+			perror("main: shmctl: ");
+		}
+	}
+}
+
+
 int forkMaps(int num_maps){
 	int i = 0;
 	int status = 0;
@@ -258,20 +279,48 @@ int forkMaps(int num_maps){
 		pid_t pid = fork();
 		if(pid == 0) // only execute this if child
 		{
-			mapPID.push_back(getpid());
 		    map(i);
+		    for(int i = 0; i < mapShm[0]->newMap.size(); i++){
+		  		cout << "in child: " <<  mapShm[0]->newMap[i].first << " " << mapShm[0]->newMap[i].second << endl;
+			}
+		    // cout << "map size: " << mapShm[i]->newMap.size();
+			// std::pair <std::string,int> pairs;
+		 //    for(int j = 0; j < mapShm[i]->newMap.size(); j++){
+		 //    	cout << "in for " << endl;
+		 //    	pairs.first = mapShm[i]->newMap[j].first;
+		 //    	pairs.second = mapShm[i]->newMap[j].second;
+		 //    	cout << "pairs " << pairs.first << " " << pairs.second << endl;
+		 //  		// cout << "in child: " << mapShm[i]->newMap[j].second << endl;
+			// 	vecOfPairs.push_back(pairs);
+			// 	cout << "size: " << vecOfPairs.size() << endl;
+			// }
 			return 0;
 		}
 	}
 
-	// for(int i = 0; i < mapShm.size(); i++){
-	// 	cout << mapShm[i]->wordMap[0].second << endl;
-	// }
-	for(int i = 0; i < mapShm[0]->wordMap.size(); i++){
-  		cout << mapShm[0]->wordMap[i].second << endl;
-	}
 	while ((wpid = wait(&status)) > 0); // only the parent waits
+
+	// vector<std::pair <std::string,int> > pairMap = vecOfPairs[0];
+	// cout << "i am here" << endl;
+	// cout << mapShmid[0] << endl;
+	// key_t mem_key = mapShmid[0];
+	// cout << mem_key << endl;
+	// int shmid = shmget (mem_key, 4096, IPC_CREAT | 0666);
+	// cout << shmid << endl;
+	// struct commonData* shm_addr = (struct commonData*) shmat(shmid, NULL, 0);
+	// for(int i = 0; i < shm_addr->newMap.size(); i++){
+ //  		cout << "in parent: " << shm_addr->newMap[i].second << endl;
+	// }
+	// cout << shm_addr << endl;
+	for(int i = 0; i < mapShm[0]->newMap.size(); i++){
+  		cout << "in parent: " <<  mapShm[0]->newMap[i].first << " " << mapShm[0]->newMap[i].second << endl;
+	}
+	// for(int k = 0; k < mapShmid.size(); k++){
+	// 	cout << "shmid: " << mapShmid[k] << endl;
+	// }
+	deleteSHM();
 	// shuffle();
+	// deleteSHM();
 	return 0;
 }
 
@@ -327,21 +376,19 @@ int main(int argc, char* argv[]){
                        (istreambuf_iterator<char>()    ) );
   	split(num_maps, content);
   	forkMaps(num_maps);
+  // 	if(getpid() == parent_pid){
+  // 		for(int i = 0; i < mapShm[9]->newMap.size(); i++){
+  // 			cout << "in parent: " << mapShm[9]->newMap[i].second << endl;
+		// }
+  // 	}
   	// for(int i = 0; i < mapShm.size(); i++){
   	// 	cout << mapShm[i] << endl;
   	// }
-  	shuffle();
   	// forkReduces(num_reduces);
   	// createSharedMem(num_maps);
   	// cout << "hello" << mapPID.size() << endl;
   	ifs.close();
 
-	 // destroy the shared memory segment. 
-  	for(int i = 0; i < mapShmid.size(); i++){
-		if (shmctl(mapShmid[i], IPC_RMID, NULL) == -1) {
-			perror("main: shmctl: ");
-		}
-	}
-	
+
   	return 0;
 }
