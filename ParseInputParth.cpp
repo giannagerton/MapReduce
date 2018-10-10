@@ -16,17 +16,15 @@
 #include <string>
 #include <cstring>
 #include <pthread.h>
+#include <map>
 
 //Make sure to add delimiter to                   account for Em Dash
-
-struct mapArgs{
-	vector<string> words;
-	int index;
-};
+void *mapFunction(void *args);
 
 using namespace std;
 
 pthread_mutex_t lock; 
+vector<vector<string>> nodeVector;
 map<string,int> mainMap;
 vector<map<string, int>> miniMaps;
 
@@ -96,12 +94,51 @@ vector<vector<string>> split(vector<string> wordVector, int numNodes){
 
 }
 
-void mapFunction(*void args){
-	vector<string> v = *reinterpret_cast<vector<sting> *>(args);
+void *mapFunction(void *args){
+	vector<string> v = nodeVector.at(*((int *)args));
+	std::map<string, int> tempMap;
+	//feed the words into the map
+	for (auto i : v)
+	{
+			map<string, int>::iterator mapIterator = tempMap.find(i);
+			if(mapIterator == tempMap.end()){
+				tempMap.insert(pair <string,int> (i, 1));
+			}
+			else{
+				mapIterator->second++;
+			}
+	}
+	//lock
+	pthread_mutex_lock(&lock);
+	//add map into the miniMaps global vector
+	miniMaps.push_back(tempMap);
+	//unlock
+    pthread_mutex_unlock(&lock); 
+
+}
+
+void shuffle(){
+	//vector iterator 
+	for(auto mM: miniMaps){
+		//map iterator
+		for(auto const& m: mM){
+			map<string, int>::iterator mapIterator = mainMap.find(m.first);
+			if(mapIterator == mainMap.end()){
+				mainMap.insert(m);
+			}
+			else{
+				mapIterator->second += m.second;
+			}
+
+		}
+	}
 
 }
 
 /*
+void reduceFunction(*void args){
+
+}
 
 	Saving for reduce 
 
@@ -175,18 +212,29 @@ int main(int argc, char* argv[]){
   	pthread_t* mapthread_handles = new pthread_t[num_maps];
   	pthread_t* reducethread_handles = new pthread_t[num_reduces];
 
+	nodeVector = split(parseInput(content), num_maps);
 
-	vector<vector<string> >nodeVector = split(parseInput(content), num_maps);
   	//now nodevector is complete
 
 	for (int i = 0; i < num_maps; i++){
-		pthread_create(&mapthread_handles[i], NULL, mapFunction, (void * nodeVector.at(i)));
+		int *arg = (int *) malloc(sizeof(int));
+		*arg = i;
+		pthread_create(&mapthread_handles[i], NULL, mapFunction, (void *) arg);
 	}	
 
+
 	//shuffle here
+	shuffle();	
 
 	//reduce here.
 
+
+
+	ofstream myfile;
+  	myfile.open ("output1.txt");
+  	myfile << "Writing this to a file.\n";
+  	myfile.close();
+  	
   	ifs.close();
   	return 0;
 }
