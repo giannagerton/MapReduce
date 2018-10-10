@@ -232,7 +232,15 @@ int main(int argc, char* argv[]){
 
 	ofstream myfile;
   	myfile.open ("output1.txt");
-  	myfile << "Writing this to a file.\n";
+  	for(auto const& x : mainMap){
+
+  			myfile << x.first  // string (key)
+              << ':' 
+              << x.second // string's value 
+              << std::endl ;
+  	
+  		
+  	}
   	myfile.close();
   	
   	ifs.close();
