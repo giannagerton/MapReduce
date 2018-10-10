@@ -47,6 +47,7 @@ vector<string> parseInput(string content){
   			i++;
   		}
   		else{
+  			if(isupper(content[i])) content[i]=tolower(content[i]);
   			buffer += content[i];
   			i++;
   			if(i == content.length()){
