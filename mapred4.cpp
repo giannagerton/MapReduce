@@ -353,7 +353,7 @@ int forkMaps(int num_maps, string app){
 		// childPID.push_back(getpid());
 		if(pid == 0) // only execute this if child
 		{
-			// childPID.push_back(getpid());
+			// childPID.push_back(getpid());s
 		    Map(i, app);
 		    // cout << "in child " << i << " "<< mmapAddr[i] << endl;
 		    // mmapAddr[i][0] = 15;
