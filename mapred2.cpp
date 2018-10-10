@@ -33,29 +33,9 @@ struct CommonData* next;
 };
 
 vector<commonData*> mapShm;
-vector<int> mapShmid;
 
-int map(int numOfProcess){
-	cout << "IN map!! with process: " << numOfProcess << endl;
-	cout << "HELLO HELP " << endl;
-	cout << "mapshm: " << mapShm.size() << endl;
-	cout << mapShm[0] << endl;
-
-	string map = mapShm[0]->wordVector[0];
-	cout << "lookie lookie: " << map << endl;
-	// vector<string> vec = mapShm[numOfProcess]->wordVector;
-	// cout << "gianna look here: " << map << endl;
-
-	// for(int i = 0; i < mapShm[numOfProcess]->wordVector.size(); i++){
-	// 	cout << mapShm[numOfProcess]->wordVector[i] << endl;
-	// }
-	// std::pair <std::string,int> pairs;
- //  	for(int i = 0; i < wordVec.size(); i++){
-	// 	cout << "HERE " << i << endl;
- //  		pairs.first = wordVec[i];
- //  		pairs.second = 1;
- //  		shm->wordMap.push_back(pairs);
- //  	}
+int map(){
+	cout << "hellooo" << endl;
 	return 0;
 }
 
@@ -90,18 +70,9 @@ vector<string> parseInput(string content){
   	return wordVector;
 }
 
-void addToSharedMem(vector<vector<string> >nodeVector){
-	for (int i = 0; i < mapShm.size(); i++){
-		cout << "HEREEEadd to shared mem " << endl;
-		mapShm[i]->wordVector = nodeVector[i];
-	}
-	// for(int i = 0; i<mapShm[0]->wordVector.size(); i++){
-	// 	cout << mapShm[0]->wordVector[i] << endl;
-	// }
-	cout << mapShm[0] << endl;
-}
+void createSharedMem(vector<vector<string> >nodeVector, int numNodes) {
+  	cout << "here7 " << endl;
 
-void createSharedMem(int numNodes) {
 	char c;
 	pid_t pid;
 	int shmflg; /* shmflg to be passed to shmget() */ 
@@ -118,7 +89,6 @@ void createSharedMem(int numNodes) {
 			exit(1); 
 		}
 		cout << "shmid: " << shmid << " i: " << i << endl;
-		mapShmid.push_back(shmid);
 
 		if ((shm = (struct commonData*)shmat(shmid, NULL, 0)) == (struct commonData*)-1) {
 	        cout << "here :( " << endl;
@@ -132,11 +102,19 @@ void createSharedMem(int numNodes) {
 	    // cout << shm->index << endl;
 	    cout << "parent process has added the wordVector to main memory" << endl;
 	    // forkYeah(shm);
+	    /* this structure is used by the shmctl() system call. */
+		if (shmdt(shm) == -1) 
+			perror("shmdt failed");
+		struct shmid_ds shm_desc;
+		/* destroy the shared memory segment. */
+		if (shmctl(shmid, IPC_RMID, &shm_desc) == -1) {
+			perror("main: shmctl: ");
+		}
 	}
 	cout << "size of mapshm: " << mapShm.size() << endl;
-	// for (int i = 0; i < mapShm.size(); i++){
-	// 	mapShm[i]->wordVector = nodeVector[i];
-	// }
+	for (int i = 0; i < mapShm.size(); i++){
+		mapShm[i]->wordVector = nodeVector[i];
+	}
 	// for(int i = 0; i < mapShm[1]->wordVector.size(); i++){
 	// 	cout << mapShm[1]->wordVector[i] << endl;
 	// }
@@ -157,15 +135,19 @@ int distributeData(vector<string> wordVector, int numNodes){
   	if((wordsPerNode * numNodes) != wordVecLength){
   		wordsLeftOver = wordVecLength - (wordsPerNode * numNodes);
   	}
+  	cout << "here6.1 " << endl;
  	for(int j = 0; j < numNodes; j++){
+	  	cout << "here6.2 " << endl;
 		vector<string> tempVec;
 		int limit = wordVector.size() - wordsPerNode;
 		cout << limit << endl;
 		cout << wordVector.size() << endl;
  		for(int i = wordVector.size()-1; i > limit; i--){
+ 			cout << "here6.3" << endl; 
 			tempVec.push_back(wordVector[i]);
 			wordVector.pop_back();
  		}
+ 		cout << "here6.4" << endl;
  		nodeVector.push_back(tempVec);
  	}
  	if(wordsLeftOver == 0){
@@ -180,16 +162,16 @@ int distributeData(vector<string> wordVector, int numNodes){
  	}
  	cout << "END OF distributeData" << endl;
  	// forkYeah(numNodes);
- 	addToSharedMem(nodeVector);
+ 	createSharedMem(nodeVector, numNodes);
  	// nodeVector contains n vectors (one for each node as given from user input)
  	return 0;
 }
 
 int split(int num_maps, string content){
+  	cout << "here4" << endl;
 	struct sembuf sem_op;
 	cout << "in split: " << num_maps << endl;
 	distributeData(parseInput(content), num_maps);
-	cout << "after distributeData: " << mapShm.size() << endl;
 	// for(int i = 0; i < wordVector.size(); i++) {
 	// 	cout << wordVector[i] << endl;
 	// }
@@ -251,8 +233,8 @@ int forkyeah(int num_maps, int num_reduces){
 		    sem_op.sem_op = -1;
 		    sem_op.sem_flg = 0;
 		    semop(mapSemVec[i], &sem_op, 1);
-		    cout << i << " " << mapShm.size() << endl;
-		    map(i);
+		    cout << i << " " << getpid() << endl;
+		    map();
 		    sem_op.sem_num = 0;
 		    sem_op.sem_op = 1;   /* <-- Comment 3 */
 		    sem_op.sem_flg = 0;
@@ -319,20 +301,11 @@ int main(int argc, char* argv[]){
 	ifstream ifs(infile.c_str());
   	string content( (istreambuf_iterator<char>(ifs) ),
                        (istreambuf_iterator<char>()    ) );
-  	createSharedMem(num_maps);
   	forkyeah(num_maps, num_reduces);
   	if(getpid() == parent_pid){
-  		split(num_maps, content);
+  		split(num_maps, content);  		
   	}
   	// cout << "hello" << mapPID.size() << endl;
   	ifs.close();
- //  	/* this structure is used by the shmctl() system call. */
-  	cout << mapShmid[0] << endl;
-	// struct shmid_ds shm_desc;
-
-	//  // destroy the shared memory segment. 
-	// if (shmctl(shmid, IPC_RMID, &shm_desc) == -1) {
-	// 	perror("main: shmctl: ");
-	// }
   	return 0;
 }

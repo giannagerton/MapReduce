@@ -126,7 +126,7 @@ int forkYeah(struct commonData* shm){
 		}
 	}
 	// shm->index++;
-	 while (wait(&status) != pid) // only the parent waits
+	while ((wpid = wait(&status)) > 0); // only the parent waits
 	cout << "here in parent " << endl;
 	// shm->wordMap.clear();
 	// cout << "shm: " << shm->index << endl;
