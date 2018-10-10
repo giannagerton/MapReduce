@@ -24,9 +24,9 @@ void *mapFunction(void *args);
 using namespace std;
 
 pthread_mutex_t lock; 
-vector<vector<string>> nodeVector;
+vector< vector<string> > nodeVector;
 map<string,int> mainMap;
-vector<map<string, int>> miniMaps;
+vector< map<string, int> > miniMaps;
 
 vector<string> parseInput(string content){
 	// This method takes in two inputs: number of Nodes and string with all text
@@ -58,7 +58,7 @@ vector<string> parseInput(string content){
 }
 
 
-vector<vector<string>> split(vector<string> wordVector, int numNodes){
+vector<vector<string> > split(vector<string> wordVector, int numNodes){
   	
 	/* takes in word vector which has all of the words from the file in one vector and
 	partions these words between the nodes (one vector per node) and saves those vectors in a vector of vectors */
@@ -98,11 +98,12 @@ void *mapFunction(void *args){
 	vector<string> v = nodeVector.at(*((int *)args));
 	std::map<string, int> tempMap;
 	//feed the words into the map
-	for (auto i : v)
+	
+	for (vector<string>::iterator i = v.begin(); i != v.end(); ++i)
 	{
-			map<string, int>::iterator mapIterator = tempMap.find(i);
+			map<string, int>::iterator mapIterator = tempMap.find(*i);
 			if(mapIterator == tempMap.end()){
-				tempMap.insert(pair <string,int> (i, 1));
+				tempMap.insert(pair <string,int> (*i, 1));
 			}
 			else{
 				mapIterator->second++;
@@ -119,15 +120,15 @@ void *mapFunction(void *args){
 
 void shuffle(){
 	//vector iterator 
-	for(auto mM: miniMaps){
+	for(vector< map<string, int> >::iterator mM = miniMaps.begin(); mM != miniMaps.end(); ++mM){
 		//map iterator
-		for(auto const& m: mM){
-			map<string, int>::iterator mapIterator = mainMap.find(m.first);
+		for(map<string, int>::iterator m = (*mM).begin(); m != (*mM).end(); ++m){
+			map<string, int>::iterator mapIterator = mainMap.find(m->first);
 			if(mapIterator == mainMap.end()){
-				mainMap.insert(m);
+				mainMap.insert(*m);
 			}
 			else{
-				mapIterator->second += m.second;
+				mapIterator->second += m->second;
 			}
 
 		}
@@ -232,15 +233,17 @@ int main(int argc, char* argv[]){
 
 	ofstream myfile;
   	myfile.open ("output1.txt");
-  	for(auto const& x : mainMap){
 
-  			myfile << x.first  // string (key)
+  	for(map<string, int>::iterator x = mainMap.begin(); x != mainMap.end(); ++x){
+
+  			myfile << x->first  // string (key)
               << ':' 
-              << x.second // string's value 
+              << x->second // string's value 
               << std::endl ;
   	
   		
-  	}
+  	} 
+  	
   	myfile.close();
   	
   	ifs.close();
