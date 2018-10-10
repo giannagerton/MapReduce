@@ -17,7 +17,9 @@
 #include <cstring>
 #include <algorithm>
 #include <sys/wait.h>
+#include <sstream>
 #include <sys/mman.h> /* mmap() is defined in this header */
+#include <map>
 
 using namespace std;
 vector<int> mapSemVec;
@@ -42,6 +44,7 @@ struct CommonData* next;
 };
 
 vector<std::pair <std::string,int> > vecOfPairs;
+multimap<string,int> mymultimap;
 vector<commonData*> mapShm;
 vector<int> mapShmid;
 
@@ -108,7 +111,8 @@ vector<string> parseInput(string content){
 
   	while (i < content.length()){
   		if(content[i] == ' ' || content[i] == ':' || content[i] == '!' || content[i] == '.' || content[i] == ',' 
-  			|| content[i] == ';' || content[i] == '-' || content[i] == '\r' || content[i] == '\n'){
+  			|| content[i] == ';' || content[i] == '-' || content[i] == '\r' || content[i] == '\n' 
+  			|| content[i] == '(' || content[i] == ')'){
   			if(!buffer.empty()){
   				wordVector.push_back(buffer);
   				buffer.clear();
@@ -126,12 +130,6 @@ vector<string> parseInput(string content){
   	// distributeData(wordVector);
   	return wordVector;
 }
-// void addToSharedMem(vector<vector <string> > nodeVector){
-// 	cout << "size of mapshm: " << mapShm.size() << endl;
-// 	for (int i = 0; i < mapShm.size(); i++){
-// 		mapShm[i]->wordVector = nodeVector[i];
-// 	}
-// }
 
 void createSharedMem(int numNodes) {
 	char c;
@@ -145,7 +143,7 @@ void createSharedMem(int numNodes) {
 	for(int i = 0 ; i < numNodes; i++){
 		void *addr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 		mmapAddress.push_back(addr);
-		cout << "Mapped at " << addr << endl;
+		// cout << "Mapped at " << addr << endl;
 		int* shared = (int*) addr;
 		mmapAddr.push_back(shared);
 	}
@@ -209,7 +207,7 @@ void sort(){
 	}
 }
 
-void map(int numOfProcess){
+void mapString(int numOfProcess){
 	int* shared = mmapAddr[numOfProcess];
 	// cout << "in map " << numOfProcess << " " << shared << endl;
 	// shared[0] = 15;
@@ -259,25 +257,93 @@ void map(int numOfProcess){
 	// }
 }
 
+void mapInt(int numOfProcess){
+	int* shared = mmapAddr[numOfProcess];
+	// cout << "in map " << numOfProcess << " " << shared << endl;
+	// shared[0] = 15;
+	vector<int> intVec;
+	vector<string> intStrings = nodeVector[numOfProcess];
+	cout << nodeVector[numOfProcess].size() << endl;
+	// cout << "size of nodevector[numOfProcess] " << numWords << endl;
+	std::sort(intStrings.begin(), intStrings.end());
+	int num = 0;
+	
+	for (int x = 0; x < intStrings.size(); x++) {
+		stringstream numstream(intStrings[x]);
+		numstream >> num;
+		if (std::find(intVec.begin(), intVec.end(), num) != intVec.end()) {
+			cout << "found duplicate\n";
+			continue;
+		}
+		intVec.push_back(num);
+	}
+	
+	std::sort(intVec.begin(), intVec.end());
+	for (int x = 0; x < intVec.size(); x++) {
+		shared[x] = intVec[x];
+	}
+	exit(0);
+}
+
+void Map(int numOfProcess, string app) {	
+	cout << "app = " << app << endl;
+	if (app=="wordcount") {
+		cout << "mapstring\n";
+		mapString(numOfProcess);
+	}
+	if (app=="sort") {
+		cout << "mapint\n";
+		mapInt(numOfProcess);
+	}
+}
+
 void shuffle(){
 	// vector<int*> mmapAddr;
 	// vector<vector<string> >nodeVector;
-	// for(int j = 0; j < nodeVector.size(); j++){
-	int* shared = mmapAddr[0];
-	for(int i = 0; i < nodeVector[0].size(); i++){
-		if(shared[i] == 0){
-			shared.erase(shared.begin() + i);
-			nodeVector[0].erase(nodeVector[0].begin() + i);
+
+
+	for(int i = 0; i < nodeVector[9].size(); i++){
+		cout << nodeVector[9][i] << endl;		
+	}
+
+	cout << endl;
+	int ruleNum = 149;
+	vector<vector <int> > toKeep(ruleNum);
+	// cout << "tokeep: " << toKeep[0].size() << endl;
+	for(int j = 0; j < nodeVector.size(); j++){
+		vector<int> toErase;
+		int* shared = mmapAddr[j];
+		for(int i = 0; i < nodeVector[j].size(); i++){
+			if(shared[i] == 0){
+				toErase.push_back(i);
+			}
+			else{
+				toKeep[j].push_back(shared[i]);
+			}
+		}
+
+		for(int i = 0; i < toErase.size(); i++){
+			nodeVector[j].erase(nodeVector[j].begin() + toErase[i]);
+			for(int k = 0; k < toErase.size(); k++){
+				toErase[k]--;
+			}		
 		}
 	}
-	for(int i = 0; i < nodeVector[0].size(); i++){
-		cout << nodeVector[0][i] << " " << shared[i] << endl;		
+
+
+	for(int j = 0; j < nodeVector.size(); j++){
+		for(int i = 0; i < nodeVector[j].size(); i++){
+			mymultimap.insert ( std::pair<string,int>(nodeVector[j][i], toKeep[j][i]) );
+			// cout << nodeVector[9][i] << " " << toKeep[9][i] << endl;		
+		}	
 	}
-	// }
 	
+	std::multimap<string,int>::iterator it;
+	for (it=mymultimap.begin(); it!=mymultimap.end(); ++it)
+    	std::cout << (*it).first << " => " << (*it).second << '\n';
 }
 
-int forkMaps(int num_maps){
+int forkMaps(int num_maps, string app){
 	int i = 0;
 	sort();
 	int status = 0;
@@ -288,7 +354,7 @@ int forkMaps(int num_maps){
 		if(pid == 0) // only execute this if child
 		{
 			// childPID.push_back(getpid());
-		    map(i);
+		    Map(i, app);
 		    // cout << "in child " << i << " "<< mmapAddr[i] << endl;
 		    // mmapAddr[i][0] = 15;
 			return 0;
@@ -297,9 +363,9 @@ int forkMaps(int num_maps){
 
 	while ((wpid = wait(&status)) > 0); // only the parent waits
 	// cout << nodeVector[0].size() << endl;
-	for(int i = 0; i < nodeVector[0].size(); i++){
-		cout << nodeVector[0][i] << " " << mmapAddr[0][i] << endl;		
-	}
+	// for(int i = 0; i < nodeVector[0].size(); i++){
+	// 	cout << nodeVector[0][i] << " " << mmapAddr[0][i] << endl;		
+	// }
 	shuffle();
 	// for(int i = 0; i < nodeVector[0].size(); i++){
 	// 	cout << nodeVector[0][i] << endl;
@@ -345,7 +411,7 @@ int main(int argc, char* argv[]){
   	string content( (istreambuf_iterator<char>(ifs) ),
                        (istreambuf_iterator<char>()    ) );
   	split(num_maps, content);
-  	forkMaps(num_maps);
+  	forkMaps(num_maps, app);
   	// cout << "after fork: " << getpid() << endl;
 
   	ifs.close();
